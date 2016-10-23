@@ -108,7 +108,7 @@ gulp.task('fonts', function(){
 });
 
 gulp.task('json', function() {
-  gulp.src('builds/development/js/*.json')
+  gulp.src('builds/development/json/*.json')
     .pipe(gulpif(env === 'production', jsonminify()))
     .pipe(gulpif(env === 'production', gulp.dest('builds/production/json')))
     .pipe(connect.reload())
