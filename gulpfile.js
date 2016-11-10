@@ -13,7 +13,9 @@ var gulp = require('gulp'),
     imagemin = require('gulp-imagemin'),
     pngcrush = require('imagemin-pngcrush'),
     concat = require('gulp-concat'),
-    pug = require('gulp-pug');
+    pug = require('gulp-pug'),
+    cleanCSS = require('gulp-clean-css'),
+    sourcemaps = require('gulp-sourcemaps');
 
 var env,
     jsSources,
@@ -33,11 +35,17 @@ if (env==='development') {
   sassStyle = 'compressed';
 }
 
-var jsSources = ['components/scripts/*.js'],
+var jsSources = ['components/scripts/**/*.js'],
     sassSources = ['components/sass/style.scss'],
-    htmlSources = [outputDir + '*.html'],
-    jsonSources = [outputDir + 'json/*.json'],
-    jsonDirPath = [outputDir + 'json/'];
+    cssVendors = ['components/css/vendors/**/*.css'],
+    jsVendors = ['components/js/vendors/**/*.js'],
+    devHTML = [outputDir + '**/*.html'],
+    devJSON = [outputDir + 'json/**/*.json'],
+    jsonDirPath = [outputDir + 'json/'],
+    devScss = ['components/sass/*.scss'],
+    devPug = ['components/pug/**/*.jade'],
+    devImg = ['builds/development/images/**/*.*'],
+    devFonts = ['builds/development/fonts/**/*.*'];
 
 gulp.task('js', function() {
   gulp.src(jsSources)
@@ -62,12 +70,14 @@ gulp.task('compass', function() {
 
 gulp.task('watch', function() {
   gulp.watch(jsSources, ['js']);
-  gulp.watch('components/sass/*.scss', ['compass']);
-  gulp.watch('components/pug/**/*.jade', ['pug']);
-  gulp.watch('builds/development/*.html', ['html']);
-  gulp.watch('builds/development/json/*.json', ['json']);
-  gulp.watch('builds/development/images/**/*.*', ['images']);
-  gulp.watch('builds/development/fonts/**/*.*', ['fonts']);
+  gulp.watch(devScss, ['compass']);
+  gulp.watch(devPug, ['pug']);
+  gulp.watch(devHTML, ['html']);
+  gulp.watch(devJSON, ['json']);
+  gulp.watch(devImg, ['images']);
+  gulp.watch(devFonts, ['fonts']);
+  gulp.watch(cssVendors, ['cssVendors']);
+  gulp.watch(jsVendors, ['jsVendors']);
 });
 
 gulp.task('connect', function() {
@@ -79,7 +89,7 @@ gulp.task('connect', function() {
 
 gulp.task('pug', function() {
     gulp.src('components/pug/**/*.jade')
-        .pipe(pug())
+        .pipe(pug({'pretty': true}))
         .pipe(gulp.dest('builds/development/'))
 });
 
@@ -114,6 +124,23 @@ gulp.task('json', function() {
     .pipe(connect.reload())
 });
 
-gulp.task('build', ['pug', 'html', 'json', 'js', 'compass', 'images', 'fonts']);
+gulp.task('cssVendors', function(){
+    gulp.src(cssVendors)
+        .pipe(concat('vendors.css'))
+        .pipe(cleanCSS({compability: 'ie10'}))
+        .pipe(gulp.dest(outputDir + 'css'))
+        .pipe(connect.reload())
+});
+
+gulp.task('jsVendors', function(){
+    gulp.src(jsVendors)
+        .pipe(concat('vendors.js'))
+        .pipe(browserify())
+        .pipe(gulpif(env === 'production', uglify()))
+        .pipe(gulp.dest(outputDir + 'js'))
+        .pipe(connect.reload())
+});
+
+gulp.task('build', ['pug', 'html', 'json', 'jsVendors', 'js', 'compass', 'cssVendors', 'images', 'fonts']);
 gulp.task('server', ['connect', 'watch']);
-gulp.task('default', ['pug', 'html', 'json', 'js', 'compass', 'images', 'fonts', 'connect', 'watch']);
+gulp.task('default', ['pug', 'html', 'json', 'jsVendors', 'js', 'compass', 'cssVendors', 'images', 'fonts', 'connect', 'watch']);
